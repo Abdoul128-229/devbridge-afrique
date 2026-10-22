@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevBridge Afrique</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--tx:#14161f;--mu:#667;--pr:#1a56db;--bd:#e3e6ee}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1118;--card:#171b26;--tx:#eef0f6;--mu:#98a0b3;--pr:#6d9bff;--bd:#2a3042}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,sans-serif}
+header{background:linear-gradient(120deg,#0b2a6f,#1a56db);color:#fff;padding:26px 16px}
+.w{max-width:860px;margin:0 auto;padding:0 16px}header .w{padding:0}h1{margin:0;font-size:1.6rem}header p{margin:6px 0 0;opacity:.9}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:14px 0}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit;margin-top:8px}
+button{background:var(--pr);color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;cursor:pointer}
+button.g{background:transparent;color:var(--pr);border:1px solid var(--bd);padding:6px 12px}
+.tabs{display:flex;gap:8px;margin:14px 0}.tabs button{background:var(--card);color:var(--tx);border:1px solid var(--bd)}.tabs button.on{background:var(--pr);color:#fff}
+.tag{font-size:.75rem;padding:2px 8px;border-radius:99px;border:1px solid var(--bd);color:var(--mu)}
+.meta,.note{color:var(--mu);font-size:.85rem}.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rk{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)}
+</style></head><body>
+<header><div class="w"><h1>🌍 DevBridge Afrique</h1><p>La plateforme d’échange des développeurs africains, pour les devs, par les devs.</p></div></header>
+<div class="w">
+<div class="row" style="margin-top:12px"><span class="note" id="who"></span><button class="g" id="out" hidden>Se déconnecter</button></div>
+<div class="tabs"><button id="t1" class="on">Fil d’échange</button><button id="t2">Classement</button></div>
+<div id="v1">
+<div class="card" id="auth"><b>Connexion</b>
+<input id="nm" placeholder="Ton pseudo (inscription)" maxlength="30">
+<input id="em" type="email" placeholder="E-mail">
+<input id="pw" type="password" placeholder="Mot de passe (6 caractères min.)">
+<div class="row" style="margin-top:10px"><button id="si">Se connecter</button><button class="g" id="su">Créer un compte</button></div></div>
+<div class="card" id="pub" hidden><b>Publier</b>
+<select id="ty"><option>Aide</option><option>Projet</option><option>Ressource</option><option>Collaboration</option></select>
+<input id="ti" placeholder="Titre" maxlength="90">
+<textarea id="ds" rows="3" placeholder="Détails, lien, compétences…" maxlength="500"></textarea>
+<div class="row" style="margin-top:10px"><span class="note" id="st"></span><button id="pb">Publier</button></div></div>
+<select id="fl"><option value="">Toutes les catégories</option><option>Aide</option><option>Projet</option><option>Ressource</option><option>Collaboration</option></select>
+<div id="ls"></div></div>
+<div id="v2" hidden><div class="card"><b>Top contributeurs</b><p class="note">1 « Utile » reçu = 1 point.</p><div id="rk"></div></div></div>
+<p class="note">DevBridge Afrique · équipe DigitalRoot · Systalink Challenge 2026</p></div>
+<script>
+// ⚠️ Remplace par les valeurs de Supabase > Project Settings > API
+const SUPABASE_URL="COLLE_ICI_TON_PROJECT_URL", SUPABASE_KEY="COLLE_ICI_TA_CLE_ANON_PUBLIC";
+const $=s=>document.getElementById(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let me=null,posts=[],votes=[];
+const msg=t=>$("st").textContent=t;
+async function load(){
+ const a=await sb.from("posts").select("*").order("created_at",{ascending:false}),b=await sb.from("votes").select("*");
+ if(a.error){$("ls").innerHTML='<div class="card">Base de données non configurée. Vérifie l’URL et la clé Supabase.</div>';return}
+ posts=a.data;votes=b.data||[];render()}
+function render(){
+ const f=$("fl").value,l=posts.filter(p=>!f||p.type===f),cnt={},pt={};
+ votes.forEach(v=>cnt[v.post_id]=(cnt[v.post_id]||0)+1);
+ posts.forEach(p=>pt[p.author]=(pt[p.author]||0)+(cnt[p.id]||0));
+ $("ls").innerHTML=l.length?l.map(p=>`<div class="card"><div class="row"><span class="tag">${esc(p.type)}</span><span class="meta">${new Date(p.created_at).toLocaleDateString("fr-FR")}</span></div><h3 style="margin:8px 0 4px">${esc(p.title)}</h3><div>${esc(p.descr)}</div><div class="row" style="margin-top:10px"><span class="meta">par ${esc(p.author)}</span><button class="g" data-id="${p.id}">👍 Utile · ${cnt[p.id]||0}</button></div></div>`).join(""):'<div class="card">Aucune publication. Sois le premier !</div>';
+ $("rk").innerHTML=Object.entries(pt).sort((a,b)=>b[1]-a[1]).map((x,i)=>`<div class="rk"><span>${i+1}. ${esc(x[0])}</span><b>${x[1]} pts</b></div>`).join("")||"Pas encore de points."}
+function ui(){$("auth").hidden=!!me;$("pub").hidden=!me;$("out").hidden=!me;$("who").textContent=me?"Connecté : "+(me.user_metadata?.name||me.email):""}
+$("su").onclick=async()=>{const r=await sb.auth.signUp({email:$("em").value,password:$("pw").value,options:{data:{name:$("nm").value.trim()||"Dev"}}});
+ alert(r.error?r.error.message:"Compte créé. Vérifie ta boîte mail si une confirmation est demandée, puis connecte-toi.")};
+$("si").onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$("em").value,password:$("pw").value});if(r.error)alert(r.error.message)};
+$("out").onclick=()=>sb.auth.signOut();
+$("pb").onclick=async()=>{const title=$("ti").value.trim();if(!title){msg("Titre requis.");return}
+ const r=await sb.from("posts").insert({author:me.user_metadata?.name||"Dev",type:$("ty").value,title,descr:$("ds").value.trim()});
+ if(r.error){msg("Erreur : "+r.error.message);return}$("ti").value="";$("ds").value="";msg("Publié ✔");load()};
+$("ls").onclick=async e=>{const id=e.target.dataset?.id;if(!id)return;if(!me){alert("Connecte-toi pour voter.");return}
+ const p=posts.find(x=>x.id===id);if(p.user_id===me.id){alert("Tu ne peux pas voter pour toi-même.");return}
+ const r=await sb.from("votes").insert({post_id:id});if(!r.error)load()};
+$("fl").onchange=render;
+$("t1").onclick=()=>{$("v1").hidden=false;$("v2").hidden=true;$("t1").className="on";$("t2").className=""};
+$("t2").onclick=()=>{$("v1").hidden=true;$("v2").hidden=false;$("t2").className="on";$("t1").className=""};
+sb.auth.onAuthStateChange((_e,s)=>{me=s?.user||null;ui()});
+sb.auth.getSession().then(r=>{me=r.data.session?.user||null;ui()});load();
+</script></body></html>
